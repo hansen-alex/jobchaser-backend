@@ -7,7 +7,7 @@ app.use(express.json());
 
 const prisma = new PrismaClient();
 
-//jtw, login? logout?
+// ---| User Routes |--- //
 
 app.get("/api/user", async (request: Request, response: Response) => {
     try {
@@ -24,7 +24,7 @@ app.post("/api/user", async (request: Request, response: Response) => {
         const result = await prisma.user.create({
             data: {
                 email,
-                password,
+                password
             }
         });
 
@@ -49,29 +49,79 @@ app.delete("/api/user/:id", async (request: Request, response: Response) => {
     }
 });
 
-// app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response) => {
-//     try {
-//         return response.status(200).send({ message: "Yo" });
-//     } catch (error) {
-//         return response.status(500).send(error);
-//     }
-// });
+//TODO: jtw, login? logout?
 
-// app.put("/api/user/:id/save-job", async (request: Request, response: Response) => {
-//     try {
-//         return response.status(200).send({ message: "Yo" });
-//     } catch (error) {
-//         return response.status(500).send(error);
-//     }
-// });
+app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response) => {
+    try {
+        const id = Number.parseInt(request.params.id);
+        if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
 
-// app.put("/api/user/:id/unsave-job", async (request: Request, response: Response) => {
-//     try {
-//         return response.status(200).send({ message: "Yo" });
-//     } catch (error) {
-//         return response.status(500).send(error);
-//     }
-// });
+        return response.status(200).send(await prisma.user.findUnique({
+            where: {
+                id: id
+            },
+            select: {
+                savedJobs: true
+            }
+        }));
+    } catch (error) {
+        return response.status(500).send(error);
+    }
+});
+
+app.put("/api/user/:id/save-job/:jobId", async (request: Request, response: Response) => {
+    try {
+        const id = Number.parseInt(request.params.id);
+        if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
+        const jobId = Number.parseInt(request.params.jobId);
+        if(!jobId) return response.status(400).send({ message: "Job ID parameter is NaN." });
+
+        const result = await prisma.user.update({
+            where: {
+                id: id
+            },
+            data: {
+                savedJobs: {
+                    connect: {
+                        id: jobId
+                    }
+                }
+            }
+        });
+
+        return response.status(200).send(result);
+    } catch (error) {
+        return response.status(500).send(error);
+    }
+});
+
+app.put("/api/user/:id/unsave-job/:jobId", async (request: Request, response: Response) => {
+    try {
+        const id = Number.parseInt(request.params.id);
+        if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
+        const jobId = Number.parseInt(request.params.jobId);
+        if(!jobId) return response.status(400).send({ message: "Job ID parameter is NaN." });
+
+        const result = await prisma.user.update({
+            where: {
+                id: id
+            },
+            data: {
+                savedJobs: {
+                    disconnect: {
+                        id: jobId
+                    }
+                }
+            }
+        });
+
+        return response.status(200).send(result);
+    } catch (error) {
+        return response.status(500).send(error);
+    }
+});
+
+// ---| Job Routes |--- //
 
 app.get("/api/job", async (request: Request, response: Response) => {
     try {
@@ -106,7 +156,7 @@ app.post("/api/job", async (request: Request, response: Response) => {
     }
 });
 
-app.get("/api/job/:id", async (request: Request, response: Response) => {
+app.delete("/api/job/:id", async (request: Request, response: Response) => {
     try {
         const id = Number.parseInt(request.params.id);
         if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
