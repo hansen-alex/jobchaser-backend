@@ -14,12 +14,37 @@ interface JWTRequest extends Request {
 }
 
 /*TODO: 
-* encryption
-* rework routes to user auth and JWT supplied userId
 * validation
-* login?
 * logout?
 */
+
+// ---| Middleware |--- //
+
+/// JWT Authorization middleware
+const JWTAuth = (request: JWTRequest, response: Response, next: NextFunction) => {
+    try {
+        const token = request.headers.authorization?.split(" ")[1]; //Removes "Bearer " from string.
+        if(!token) return response.status(401).send({ message: "Invalid token." });
+
+        const JWT_SECRET = process.env.JWT_SECRET;
+        if(!JWT_SECRET) return response.status(500).send({ message: "Internal server error." });
+
+        jwt.verify(token, JWT_SECRET, (error, decoded) => {
+            if(error) {
+                if(error.name == "JsonWebTokenError") return response.status(401).send({ message: "Invalid token." });
+                if(error.name == "TokenExpiredError") return response.status(401).send({ message: "Token expired." });
+                throw error;
+            }
+            else {
+                request.user = decoded as JwtPayload;
+                next();
+            }
+        });
+
+    } catch (error) {
+        response.status(500).send(error);
+    }
+};
 
 // ---| User Routes |--- //
 
@@ -36,8 +61,8 @@ app.get("/api/user", async (request: Request, response: Response) => {
 app.post("/api/user", async (request: Request, response: Response) => {
     try {
         const { email, password } = request.body;
-
-        const encryptedPassword = await bcrypt.hash(password, 10);
+        
+        const encryptedPassword = await bcrypt.hash(password, 10);        
         const result = await prisma.user.create({
             data: {
                 email: email,
@@ -92,11 +117,11 @@ app.delete("/api/user/:id", async (request: Request, response: Response) => {
     }
 });
 
-/// Get all saved jobs from a user by id.
-app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response) => {
+/// Get all saved jobs from a user by JWT.
+app.get("/api/user/saved-jobs", JWTAuth, async (request: JWTRequest, response: Response) => {
     try {
-        const id = Number.parseInt(request.params.id);
-        if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
+        const id = Number.parseInt(request.user?.id);
+        if(!id) return response.status(400).send({ message: "Invalid user ID." });
 
         return response.status(200).send(await prisma.user.findUnique({
             where: {
@@ -111,15 +136,15 @@ app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response)
     }
 });
 
-/// Save a job by jobId to a user by id.
-app.put("/api/user/:id/save-job/:jobId", async (request: Request, response: Response) => {
+/// Save a job by jobId to a user by JWT.
+app.put("/api/user/save-job/:jobId", JWTAuth, async (request: JWTRequest, response: Response) => {
     try {
-        const id = Number.parseInt(request.params.id);
-        if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
+        const id = Number.parseInt(request.user?.id);
+        if(!id) return response.status(400).send({ message: "Invalid user ID." });
         const jobId = Number.parseInt(request.params.jobId);
         if(!jobId) return response.status(400).send({ message: "Job ID parameter is NaN." });
 
-        const result = await prisma.user.update({
+        /*const result =*/ await prisma.user.update({
             where: {
                 id: id
             },
@@ -132,21 +157,21 @@ app.put("/api/user/:id/save-job/:jobId", async (request: Request, response: Resp
             }
         });
 
-        return response.status(200).send(result);
+        return response.status(200).send();
     } catch (error) {
         return response.status(500).send(error);
     }
 });
 
-/// Remove a saved job by jobId to a user by id.
-app.put("/api/user/:id/unsave-job/:jobId", async (request: Request, response: Response) => {
+/// Remove a saved job by jobId to a user by JWT.
+app.put("/api/user/unsave-job/:jobId", JWTAuth, async (request: JWTRequest, response: Response) => {
     try {
-        const id = Number.parseInt(request.params.id);
-        if(!id) return response.status(400).send({ message: "ID parameter is NaN." });
+        const id = Number.parseInt(request.user?.id);
+        if(!id) return response.status(400).send({ message: "Invalid user ID." });
         const jobId = Number.parseInt(request.params.jobId);
         if(!jobId) return response.status(400).send({ message: "Job ID parameter is NaN." });
 
-        const result = await prisma.user.update({
+        /*const result =*/ await prisma.user.update({
             where: {
                 id: id
             },
@@ -159,7 +184,7 @@ app.put("/api/user/:id/unsave-job/:jobId", async (request: Request, response: Re
             }
         });
 
-        return response.status(200).send(result);
+        return response.status(200).send();
     } catch (error) {
         return response.status(500).send(error);
     }
@@ -215,41 +240,6 @@ app.delete("/api/job/:id", async (request: Request, response: Response) => {
         }));
     } catch (error) {
         return response.status(500).send(error);
-    }
-});
-
-/// JWT Authorization middleware
-const JWTAuth = (request: JWTRequest, response: Response, next: NextFunction) => {
-    try {
-        const token = request.headers.authorization?.split(" ")[1]; //Removes "Bearer " from string.
-        if(!token) return response.status(401).send({ message: "Unauthorized." });
-
-        const JWT_SECRET = process.env.JWT_SECRET;
-        if(!JWT_SECRET) return response.status(500).send({ message: "Internal server error." });
-
-        jwt.verify(token, JWT_SECRET, (error, decoded) => {
-            if(error) {
-                if(error.name == "JsonWebTokenError") return response.status(401).send({ message: "Invalid token." });
-                if(error.name == "TokenExpiredError") return response.status(401).send({ message: "Token expired." });
-                throw error;
-            }
-            else {
-                request.user = decoded as JwtPayload;
-                next();
-            }
-        });
-
-    } catch (error) {
-        response.status(500).send(error);
-    }
-};
-
-//test route
-app.get("/protected", JWTAuth, (request: JWTRequest, response: Response) => {
-    try {
-        response.status(200).send(`User ${request.user?.id} authenticated`);
-    } catch (error) {
-        response.status(500).send(error);
     }
 });
 
