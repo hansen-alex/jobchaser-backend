@@ -1,6 +1,6 @@
-import express, { request, Request, response, Response } from "express"
+import express, { NextFunction, request, Request, response, Response } from "express"
 import { PrismaClient } from "@prisma/client";
-import jwt from "jsonwebtoken";
+import jwt, { JwtPayload } from "jsonwebtoken";
 
 const PORT = 3000;
 const app = express();
@@ -8,8 +8,13 @@ app.use(express.json());
 
 const prisma = new PrismaClient();
 
+interface JWTRequest extends Request {
+    user?: JwtPayload;
+}
+
 /*TODO: 
 * jtw
+* rework routes to user auth and JWT supplied userId
 * validation
 * login?
 * logout?
@@ -61,7 +66,8 @@ app.post("/api/user/login", async (request: Request, response: Response) => {
         const JWT_SECRET = process.env.JWT_SECRET;
         if(!JWT_SECRET) return response.status(500).send({ message: "Internal server error." });
 
-        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: 3600 });
+        
         return response.status(200).send({ message: "Login successful.", token: token });
     } catch (error) {
         return response.status(500).send(error);
@@ -207,6 +213,41 @@ app.delete("/api/job/:id", async (request: Request, response: Response) => {
         }));
     } catch (error) {
         return response.status(500).send(error);
+    }
+});
+
+/// JWT Authorization middleware
+const JWTAuth = (request: JWTRequest, response: Response, next: NextFunction) => {
+    try {
+        const token = request.headers.authorization?.split(" ")[1]; //Removes "Bearer " from string.
+        if(!token) return response.status(401).send({ message: "Unauthorized." });
+
+        const JWT_SECRET = process.env.JWT_SECRET;
+        if(!JWT_SECRET) return response.status(500).send({ message: "Internal server error." });
+
+        jwt.verify(token, JWT_SECRET, (error, decoded) => {
+            if(error) {
+                if(error.name == "JsonWebTokenError") return response.status(401).send({ message: "Invalid token." });
+                if(error.name == "TokenExpiredError") return response.status(401).send({ message: "Token expired." });
+                throw error;
+            }
+            else {
+                request.user = decoded as JwtPayload;
+                next();
+            }
+        });
+
+    } catch (error) {
+        response.status(500).send(error);
+    }
+};
+
+//test route
+app.get("/protected", JWTAuth, (request: JWTRequest, response: Response) => {
+    try {
+        response.status(200).send(`User ${request.user?.id} authenticated`);
+    } catch (error) {
+        response.status(500).send(error);
     }
 });
 
