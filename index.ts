@@ -1,6 +1,7 @@
 import express, { NextFunction, request, Request, response, Response } from "express"
 import { PrismaClient } from "@prisma/client";
 import jwt, { JwtPayload } from "jsonwebtoken";
+import bcrypt from "bcrypt"
 
 const PORT = 3000;
 const app = express();
@@ -13,7 +14,7 @@ interface JWTRequest extends Request {
 }
 
 /*TODO: 
-* jtw
+* encryption
 * rework routes to user auth and JWT supplied userId
 * validation
 * login?
@@ -36,10 +37,11 @@ app.post("/api/user", async (request: Request, response: Response) => {
     try {
         const { email, password } = request.body;
 
+        const encryptedPassword = await bcrypt.hash(password, 10);
         const result = await prisma.user.create({
             data: {
-                email,
-                password
+                email: email,
+                password: encryptedPassword
             }
         });
 
@@ -59,9 +61,9 @@ app.post("/api/user/login", async (request: Request, response: Response) => {
                 email: email
             }
         });
-
+        
         if(!user) return response.status(400).send({ message: "Email and password do not match." });
-        if(user.password != password) return response.status(400).send({ message: "Email and password do not match." });
+        if(!await bcrypt.compare(password, user.password)) return response.status(400).send({ message: "Email and password do not match." });
 
         const JWT_SECRET = process.env.JWT_SECRET;
         if(!JWT_SECRET) return response.status(500).send({ message: "Internal server error." });
