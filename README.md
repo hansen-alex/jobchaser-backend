@@ -6,5 +6,5 @@ Alex Hansen - FJS23
 
 ### .env
 
-DATABASE_URL="..."
-JWT_SECRET="..."
+- DATABASE_URL="..."
+- JWT_SECRET="..."
