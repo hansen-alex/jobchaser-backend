@@ -9,6 +9,7 @@ const prisma = new PrismaClient();
 
 // ---| User Routes |--- //
 
+/// Get all users.
 app.get("/api/user", async (request: Request, response: Response) => {
     try {
         return response.status(200).send(await prisma.user.findMany());
@@ -17,6 +18,7 @@ app.get("/api/user", async (request: Request, response: Response) => {
     }
 });
 
+/// Create a new user.
 app.post("/api/user", async (request: Request, response: Response) => {
     try {
         const { email, password } = request.body;
@@ -34,6 +36,7 @@ app.post("/api/user", async (request: Request, response: Response) => {
     }
 });
 
+/// Delete a user by id.
 app.delete("/api/user/:id", async (request: Request, response: Response) => {
     try {
         const id = Number.parseInt(request.params.id);
@@ -49,8 +52,14 @@ app.delete("/api/user/:id", async (request: Request, response: Response) => {
     }
 });
 
-//TODO: jtw, login? logout?
+/*TODO: 
+* jtw
+* validation
+* login?
+* logout?
+*/
 
+/// Get all saved jobs from a user by id.
 app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response) => {
     try {
         const id = Number.parseInt(request.params.id);
@@ -69,6 +78,7 @@ app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response)
     }
 });
 
+/// Save a job by jobId to a user by id.
 app.put("/api/user/:id/save-job/:jobId", async (request: Request, response: Response) => {
     try {
         const id = Number.parseInt(request.params.id);
@@ -95,6 +105,7 @@ app.put("/api/user/:id/save-job/:jobId", async (request: Request, response: Resp
     }
 });
 
+/// Remove a saved job by jobId to a user by id.
 app.put("/api/user/:id/unsave-job/:jobId", async (request: Request, response: Response) => {
     try {
         const id = Number.parseInt(request.params.id);
@@ -123,6 +134,7 @@ app.put("/api/user/:id/unsave-job/:jobId", async (request: Request, response: Re
 
 // ---| Job Routes |--- //
 
+/// Get all jobs.
 app.get("/api/job", async (request: Request, response: Response) => {
     try {
         return response.status(200).send(await prisma.job.findMany());
@@ -131,6 +143,7 @@ app.get("/api/job", async (request: Request, response: Response) => {
     }
 });
 
+/// Create a new job.
 app.post("/api/job", async (request: Request, response: Response) => {
     try {
         const { company, logo, position, role, level, postedAt, contract, location, languages, tools } = request.body;
@@ -156,6 +169,7 @@ app.post("/api/job", async (request: Request, response: Response) => {
     }
 });
 
+/// Delete a job by id.
 app.delete("/api/job/:id", async (request: Request, response: Response) => {
     try {
         const id = Number.parseInt(request.params.id);
