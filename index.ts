@@ -13,11 +13,6 @@ interface JWTRequest extends Request {
     user?: JwtPayload;
 }
 
-/*TODO: 
-* validation
-* logout?
-*/
-
 // ---| Middleware |--- //
 
 /// JWT Authorization middleware
@@ -62,6 +57,14 @@ app.post("/api/user", async (request: Request, response: Response) => {
     try {
         const { email, password } = request.body;
         
+        if(!email) return response.status(400).send({ message: "No email supplied." });
+        if(!password) return response.status(400).send({ message: "No password supplied." });
+        if(await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        })) return response.status(400).send({ message: "Email already in use." });
+        
         const encryptedPassword = await bcrypt.hash(password, 10);        
         const result = await prisma.user.create({
             data: {
@@ -80,6 +83,9 @@ app.post("/api/user", async (request: Request, response: Response) => {
 app.post("/api/user/login", async (request: Request, response: Response) => {
     try {
         const { email, password } = request.body;
+
+        if(!email) return response.status(400).send({ message: "No email supplied." });
+        if(!password) return response.status(400).send({ message: "No password supplied." });
 
         const user = await prisma.user.findUnique({
             where: {
@@ -205,6 +211,15 @@ app.get("/api/job", async (request: Request, response: Response) => {
 app.post("/api/job", async (request: Request, response: Response) => {
     try {
         const { company, logo, position, role, level, postedAt, contract, location, languages, tools } = request.body;
+
+        if(!company) return response.status(400).send({ message: "No company supplied." });
+        if(!logo) return response.status(400).send({ message: "No logo supplied." });
+        if(!position) return response.status(400).send({ message: "No position supplied." });
+        if(!role) return response.status(400).send({ message: "No role supplied." });
+        if(!level) return response.status(400).send({ message: "No level supplied." });
+        if(!postedAt) return response.status(400).send({ message: "No postedAt supplied." });
+        if(!contract) return response.status(400).send({ message: "No contract supplied." });
+        if(!location) return response.status(400).send({ message: "No location supplied." });
 
         const result = await prisma.job.create({
             data: {
