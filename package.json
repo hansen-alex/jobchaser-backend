@@ -12,10 +12,12 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^5.22.0",
-    "express": "^4.21.1"
+    "express": "^4.21.1",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/jsonwebtoken": "^9.0.7",
     "prisma": "^5.22.0"
   }
 }

@@ -1,11 +1,19 @@
-import express, { Request, Response } from "express"
+import express, { request, Request, response, Response } from "express"
 import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
 
 const PORT = 3000;
 const app = express();
 app.use(express.json());
 
 const prisma = new PrismaClient();
+
+/*TODO: 
+* jtw
+* validation
+* login?
+* logout?
+*/
 
 // ---| User Routes |--- //
 
@@ -36,6 +44,30 @@ app.post("/api/user", async (request: Request, response: Response) => {
     }
 });
 
+/// Verify user credentials and return JWT if success.
+app.post("/api/user/login", async (request: Request, response: Response) => {
+    try {
+        const { email, password } = request.body;
+
+        const user = await prisma.user.findUnique({
+            where: {
+                email: email
+            }
+        });
+
+        if(!user) return response.status(400).send({ message: "Email and password do not match." });
+        if(user.password != password) return response.status(400).send({ message: "Email and password do not match." });
+
+        const JWT_SECRET = process.env.JWT_SECRET;
+        if(!JWT_SECRET) return response.status(500).send({ message: "Internal server error." });
+
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: "1h" });
+        return response.status(200).send({ message: "Login successful.", token: token });
+    } catch (error) {
+        return response.status(500).send(error);
+    }
+});
+
 /// Delete a user by id.
 app.delete("/api/user/:id", async (request: Request, response: Response) => {
     try {
@@ -51,13 +83,6 @@ app.delete("/api/user/:id", async (request: Request, response: Response) => {
         return response.status(500).send(error);
     }
 });
-
-/*TODO: 
-* jtw
-* validation
-* login?
-* logout?
-*/
 
 /// Get all saved jobs from a user by id.
 app.get("/api/user/:id/saved-jobs", async (request: Request, response: Response) => {
